@@ -4,12 +4,12 @@ import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
 import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.net.URI;
+import java.util.Date;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -34,5 +34,16 @@ public class ProductoController {
         return this.productoService.findById(id)
                 .map(producto -> ResponseEntity.ok().body(producto))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public Mono<ResponseEntity<Producto>> crear(@RequestBody Producto producto) {
+        if(producto.getCreateAt() == null) {
+            producto.setCreateAt(new Date());
+        }
+        return this.productoService.save(producto).map(prod -> ResponseEntity
+                .created(URI.create("/api/productos/".concat(prod.getId())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(prod));
     }
 }
