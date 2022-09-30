@@ -2,6 +2,7 @@ package com.magadiflo.webflux.api.rest.app.controllers;
 
 import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
 import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -61,5 +62,12 @@ public class ProductoController {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(p))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
+    }
+
+    @DeleteMapping(path = "/{id}")
+    public Mono<ResponseEntity<Void>> eliminar(@PathVariable String id) {
+        return this.productoService.findById(id)
+                .flatMap(p -> this.productoService.delete(p).then(Mono.just(new ResponseEntity<Void>(HttpStatus.NO_CONTENT))))
+                .defaultIfEmpty(new ResponseEntity<Void>(HttpStatus.NOT_FOUND));
     }
 }
