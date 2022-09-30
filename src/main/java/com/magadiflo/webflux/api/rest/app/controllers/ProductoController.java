@@ -2,21 +2,28 @@ package com.magadiflo.webflux.api.rest.app.controllers;
 
 import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
 import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.net.URI;
 import java.util.Date;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/productos")
 public class ProductoController {
 
     private final IProductoService productoService;
+
+    @Value("${config.uploads.path}")
+    private String uploadPath;
 
     public ProductoController(IProductoService productoService) {
         this.productoService = productoService;
@@ -69,5 +76,23 @@ public class ProductoController {
         return this.productoService.findById(id)
                 .flatMap(p -> this.productoService.delete(p).then(Mono.just(new ResponseEntity<Void>(HttpStatus.NO_CONTENT))))
                 .defaultIfEmpty(new ResponseEntity<Void>(HttpStatus.NOT_FOUND));
+    }
+
+    @PostMapping(path = "/upload/{id}")
+    public Mono<ResponseEntity<Producto>> upload(@PathVariable String id, @RequestPart FilePart file) {
+        return this.productoService.findById(id)
+                .flatMap(producto -> {
+                    producto.setFoto(UUID.randomUUID().toString()
+                            .concat("-")
+                            .concat(file.filename()
+                                    .replace(" ", "")
+                                    .replace(":", "")
+                                    .replace("\\", "")
+                            )
+                    );
+                    return file.transferTo(new File(this.uploadPath.concat(producto.getFoto())))
+                            .then(this.productoService.save(producto));
+                }).map(producto -> ResponseEntity.ok().body(producto))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 }
