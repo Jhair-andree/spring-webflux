@@ -38,12 +38,28 @@ public class ProductoController {
 
     @PostMapping
     public Mono<ResponseEntity<Producto>> crear(@RequestBody Producto producto) {
-        if(producto.getCreateAt() == null) {
+        if (producto.getCreateAt() == null) {
             producto.setCreateAt(new Date());
         }
         return this.productoService.save(producto).map(prod -> ResponseEntity
                 .created(URI.create("/api/productos/".concat(prod.getId())))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(prod));
+    }
+
+    @PutMapping(path = "/{id}")
+    public Mono<ResponseEntity<Producto>> editar(@RequestBody Producto producto, @PathVariable String id) {
+        return this.productoService.findById(id)
+                .flatMap(prod -> {
+                    prod.setNombre(producto.getNombre());
+                    prod.setCategoria(producto.getCategoria());
+                    prod.setPrecio(producto.getPrecio());
+                    return this.productoService.save(prod);
+                })
+                .map(p -> ResponseEntity
+                        .created(URI.create("/api/productos/".concat(p.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(p))
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 }
