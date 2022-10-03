@@ -15,7 +15,8 @@ public class RouterFunctionConfig {
     public RouterFunction<ServerResponse> routes(ProductoHandler handler) { //Desacoplamos el handler de esta clase de configuración y lo llevamos a una clase distinta (ProductoHandler)
         return RouterFunctions
                 .route(RequestPredicates.GET("/api/v2/productos").or(RequestPredicates.GET("/api/v3/productos")),handler::listar)
-                .andRoute(RequestPredicates.GET("/api/v2/productos/{id}"), handler::ver);
+                .andRoute(RequestPredicates.GET("/api/v2/productos/{id}"), handler::ver)
+                .andRoute(RequestPredicates.POST("/api/v2/productos"), handler::crear);
     }
 
 }

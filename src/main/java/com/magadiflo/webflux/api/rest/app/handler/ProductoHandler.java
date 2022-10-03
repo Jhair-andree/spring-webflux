@@ -4,10 +4,12 @@ import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
 import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
+
+import java.net.URI;
+import java.util.Date;
 
 /**
  * Esta clase hará el papel del controlador en el fondo,
@@ -34,6 +36,20 @@ public class ProductoHandler {
         return this.productoService.findById(id)
                 .flatMap(producto -> ServerResponse.ok().bodyValue(producto)) //Aquí como se está emitiendo un objeto normal, es decir un producto (no es un tipo reactivo, es decir no es un Flux ni un Mono) usamos bodyValue(...)
                 .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
+    public Mono<ServerResponse> crear(ServerRequest request) {
+        Mono<Producto> productoMono = request.bodyToMono(Producto.class);
+        return productoMono.flatMap(producto -> {
+            if (producto.getCreateAt() == null) {
+                producto.setCreateAt(new Date());
+            }
+            return this.productoService.save(producto);
+        }).flatMap(p -> ServerResponse
+                .created(URI.create("/api/v2/productos/".concat(p.getId())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(p)
+        );
     }
 
 }
