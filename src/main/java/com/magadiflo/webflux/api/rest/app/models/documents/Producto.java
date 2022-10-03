@@ -24,6 +24,7 @@ public class Producto {
     private String foto;
 
     @Valid
+    @NotNull
     private Categoria categoria;
 
     public Producto() {
