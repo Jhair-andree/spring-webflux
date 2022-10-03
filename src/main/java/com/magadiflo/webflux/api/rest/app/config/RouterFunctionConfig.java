@@ -13,10 +13,9 @@ public class RouterFunctionConfig {
 
     @Bean
     public RouterFunction<ServerResponse> routes(ProductoHandler handler) { //Desacoplamos el handler de esta clase de configuración y lo llevamos a una clase distinta (ProductoHandler)
-        return RouterFunctions.route(
-                RequestPredicates.GET("/api/v2/productos").or(RequestPredicates.GET("/api/v3/productos")), //Si queremos mapear el mismo resultado a más de una ruta
-                handler::listar
-        );
+        return RouterFunctions
+                .route(RequestPredicates.GET("/api/v2/productos").or(RequestPredicates.GET("/api/v3/productos")),handler::listar)
+                .andRoute(RequestPredicates.GET("/api/v2/productos/{id}"), handler::ver);
     }
 
 }
