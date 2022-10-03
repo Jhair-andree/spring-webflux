@@ -16,7 +16,8 @@ public class RouterFunctionConfig {
         return RouterFunctions
                 .route(RequestPredicates.GET("/api/v2/productos").or(RequestPredicates.GET("/api/v3/productos")),handler::listar)
                 .andRoute(RequestPredicates.GET("/api/v2/productos/{id}"), handler::ver)
-                .andRoute(RequestPredicates.POST("/api/v2/productos"), handler::crear);
+                .andRoute(RequestPredicates.POST("/api/v2/productos"), handler::crear)
+                .andRoute(RequestPredicates.PUT("/api/v2/productos/{id}"), handler::editar);
     }
 
 }

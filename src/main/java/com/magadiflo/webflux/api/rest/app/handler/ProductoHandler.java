@@ -52,4 +52,21 @@ public class ProductoHandler {
         );
     }
 
+    public Mono<ServerResponse> editar(ServerRequest request) {
+        String id = request.pathVariable("id");
+        Mono<Producto> productoMono = request.bodyToMono(Producto.class);
+        Mono<Producto> productoMonoDB = this.productoService.findById(id);
+        //zipWith, recordar que lo usamos para combinar
+        return productoMonoDB.zipWith(productoMono, (prodBD, prodReq) -> {
+            prodBD.setNombre(prodReq.getNombre());
+            prodBD.setPrecio(prodReq.getPrecio());
+            prodBD.setCategoria(prodReq.getCategoria());
+            return prodBD;
+        }).flatMap(producto -> ServerResponse
+                .created(URI.create("/api/v2/productos/".concat(producto.getId())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(this.productoService.save(producto), Producto.class)
+        ).switchIfEmpty(ServerResponse.notFound().build());
+    }
+
 }
