@@ -1,10 +1,12 @@
 package com.magadiflo.webflux.api.rest.app.handler;
 
+import com.magadiflo.webflux.api.rest.app.models.documents.Categoria;
 import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
 import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.codec.multipart.FormFieldPart;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -103,6 +105,39 @@ public class ProductoHandler {
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(p))
                 .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
+    public Mono<ServerResponse> crearConFoto(ServerRequest request) {
+        Mono<Producto> productoMono = request.multipartData().map(multipart -> {
+            FormFieldPart nombre = (FormFieldPart) multipart.toSingleValueMap().get("nombre");
+            FormFieldPart precio = (FormFieldPart) multipart.toSingleValueMap().get("precio");
+            FormFieldPart categoriaId = (FormFieldPart) multipart.toSingleValueMap().get("categoria.id");
+            FormFieldPart categoriaNombre = (FormFieldPart) multipart.toSingleValueMap().get("categoria.nombre");
+
+            Categoria categoria = new Categoria(categoriaNombre.value());
+            categoria.setId(categoriaId.value());
+
+            return new Producto(nombre.value(), Double.parseDouble(precio.value()), categoria);
+        });
+
+        return request.multipartData()
+                .map(multipart -> multipart.toSingleValueMap().get("file"))
+                .cast(FilePart.class)
+                .flatMap(filePart -> productoMono.flatMap(producto -> {
+                    producto.setFoto(UUID.randomUUID().toString()
+                            .concat("-")
+                            .concat(filePart.filename()
+                                    .replace(" ", "")
+                                    .replace(":", "")
+                                    .replace("\\", ""))
+                    );
+                    producto.setCreateAt(new Date());
+                    return filePart.transferTo(new File(this.uploadFile + producto.getFoto())).then(this.productoService.save(producto));
+                }))
+                .flatMap(p -> ServerResponse
+                        .created(URI.create("/api/v2/productos/".concat(p.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(p));
     }
 
 }
