@@ -55,6 +55,11 @@ public class ProductoServiceImpl implements IProductoService {
     }
 
     @Override
+    public Mono<Producto> findByNombre(String nombre) {
+        return this.productoRepository.obtenerPorNombre(nombre);
+    }
+
+    @Override
     public Flux<Categoria> findAllCategoria() {
         return this.categoriaRepository.findAll();
     }

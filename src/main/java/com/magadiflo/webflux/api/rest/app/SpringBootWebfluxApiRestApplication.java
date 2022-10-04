@@ -46,7 +46,7 @@ public class SpringBootWebfluxApiRestApplication implements CommandLineRunner {
                 .doOnNext(categoria -> LOG.info("Categoría insertada: id={}, nombre={}", categoria.getId(), categoria.getNombre()))
                 .thenMany(
                         Flux.just(
-                                        new Producto("Tv LG 70'", 3609.40, electronico),
+                                        new Producto("Tv LG 70", 3609.40, electronico),
                                         new Producto("Sony Cámara HD Digital", 680.60, electronico),
                                         new Producto("Bicicleta Monteñera", 1800.60, deporte),
                                         new Producto("Monitor 27' LG", 750.00, electronico),

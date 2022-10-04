@@ -1,6 +1,7 @@
 package com.magadiflo.webflux.api.rest.app;
 
 import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
+import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,13 +9,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class SpringBootWebfluxApiRestApplicationTests {
 
     @Autowired
     private WebTestClient client;
+
+    @Autowired
+    private IProductoService productoService;
 
     @Test
     public void listarTest() {
@@ -33,7 +39,34 @@ public class SpringBootWebfluxApiRestApplicationTests {
                     });
                     Assertions.assertThat(productos.size() > 0).isTrue();
                 });
-                //.hasSize(12);
+        //.hasSize(12);
+    }
+
+    @Test
+    public void verTest() throws InterruptedException {
+        //Esperamos unos 3segundos mientras en la clase principal del proyecto se termina de insertar los registros al a BD
+        TimeUnit.SECONDS.sleep(3);
+
+        //Es importante usar el block() para obtener un objeto a partir del flujo ya que dentro del pruebas unitarias no se puede usar el subscribe.
+        //Para pruebas unitarias tiene que ser SÍNCRONO y NO asíncrono
+        Producto producto = this.productoService.findByNombre("Interruptor simple").block();
+        System.out.println("Producto encontrado.... " + producto);
+
+        this.client.get()
+                .uri("/api/v2/productos/{id}", Collections.singletonMap("id", producto.getId()))
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(Producto.class)
+                .consumeWith(response -> {
+                    Producto productos = response.getResponseBody();
+                    Assertions.assertThat(productos.getId()).isNotEmpty();
+                    Assertions.assertThat(productos.getId().length()).isGreaterThan(0);
+                    Assertions.assertThat(productos.getNombre()).isEqualTo("Interruptor simple");
+                });
+        //.jsonPath("$.id").isNotEmpty()
+        //.jsonPath("$.nombre").isEqualTo("Interruptor simple");
     }
 
 }

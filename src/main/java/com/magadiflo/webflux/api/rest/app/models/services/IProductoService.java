@@ -20,6 +20,8 @@ public interface IProductoService {
 
     Mono<Void> delete(Producto producto);
 
+    Mono<Producto> findByNombre(String nombre);
+
     //Categoría
     Flux<Categoria> findAllCategoria();
 
