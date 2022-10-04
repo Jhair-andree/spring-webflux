@@ -8,8 +8,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.http.codec.multipart.FormFieldPart;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
@@ -26,12 +30,14 @@ import java.util.UUID;
 public class ProductoHandler {
 
     private final IProductoService productoService;
+    private final Validator validator;
 
     @Value("${config.uploads.path}")
     private String uploadFile;
 
-    public ProductoHandler(IProductoService productoService) {
+    public ProductoHandler(IProductoService productoService, Validator validator) {
         this.productoService = productoService;
+        this.validator = validator;
     }
 
     public Mono<ServerResponse> listar(ServerRequest request) {
@@ -50,15 +56,27 @@ public class ProductoHandler {
     public Mono<ServerResponse> crear(ServerRequest request) {
         Mono<Producto> productoMono = request.bodyToMono(Producto.class);
         return productoMono.flatMap(producto -> {
-            if (producto.getCreateAt() == null) {
-                producto.setCreateAt(new Date());
+
+            Errors errors = new BeanPropertyBindingResult(producto, Producto.class.getName());
+            this.validator.validate(producto, errors);
+
+            if (errors.hasErrors()) {
+                return Flux.fromIterable(errors.getFieldErrors())
+                        .map(fieldError -> String.format("El campo %s %s", fieldError.getField(), fieldError.getDefaultMessage()))
+                        .collectList()
+                        .flatMap(list -> ServerResponse.badRequest().bodyValue(list));
+            } else {
+                if (producto.getCreateAt() == null) {
+                    producto.setCreateAt(new Date());
+                }
+                return this.productoService.save(producto)
+                        .flatMap(prodBD -> ServerResponse
+                                .created(URI.create("/api/v2/productos/".concat(prodBD.getId())))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(prodBD)
+                        );
             }
-            return this.productoService.save(producto);
-        }).flatMap(p -> ServerResponse
-                .created(URI.create("/api/v2/productos/".concat(p.getId())))
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(p)
-        );
+        });
     }
 
     public Mono<ServerResponse> editar(ServerRequest request) {
