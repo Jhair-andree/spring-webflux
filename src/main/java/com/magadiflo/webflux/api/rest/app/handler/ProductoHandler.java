@@ -2,14 +2,18 @@ package com.magadiflo.webflux.api.rest.app.handler;
 
 import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
 import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.net.URI;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * Esta clase hará el papel del controlador en el fondo,
@@ -20,6 +24,9 @@ import java.util.Date;
 public class ProductoHandler {
 
     private final IProductoService productoService;
+
+    @Value("${config.uploads.path}")
+    private String uploadFile;
 
     public ProductoHandler(IProductoService productoService) {
         this.productoService = productoService;
@@ -73,6 +80,28 @@ public class ProductoHandler {
         String id = request.pathVariable("id");
         Mono<Producto> productoMonoDB = this.productoService.findById(id);
         return productoMonoDB.flatMap(producto -> this.productoService.delete(producto).then(ServerResponse.noContent().build()))
+                .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
+    public Mono<ServerResponse> upload(ServerRequest request) {
+        String id = request.pathVariable("id");
+        return request.multipartData()
+                .map(multipart -> multipart.toSingleValueMap().get("file"))
+                .cast(FilePart.class)
+                .flatMap(filePart -> this.productoService.findById(id).flatMap(producto -> {
+                    producto.setFoto(UUID.randomUUID().toString()
+                            .concat("-")
+                            .concat(filePart.filename()
+                                    .replace(" ", "")
+                                    .replace(":", "")
+                                    .replace("\\", ""))
+                    );
+                    return filePart.transferTo(new File(this.uploadFile + producto.getFoto())).then(this.productoService.save(producto));
+                }))
+                .flatMap(p -> ServerResponse
+                        .created(URI.create("/api/v2/productos/".concat(p.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(p))
                 .switchIfEmpty(ServerResponse.notFound().build());
     }
 
