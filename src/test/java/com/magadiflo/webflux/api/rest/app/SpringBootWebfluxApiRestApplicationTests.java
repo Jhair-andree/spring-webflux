@@ -136,4 +136,21 @@ public class SpringBootWebfluxApiRestApplicationTests {
                 .jsonPath("$.categoria.nombre").isEqualTo("Informática");
     }
 
+    @Test
+    public void eliminarTest() {
+        Producto producto = this.productoService.findByNombre("Interruptor simple").block();
+
+        this.client.delete()
+                .uri("/api/v2/productos/{id}", Collections.singletonMap("id", producto.getId()))
+                .exchange()
+                .expectStatus().isNoContent()
+                .expectBody().isEmpty();
+
+        this.client.get()
+                .uri("/api/v2/productos/{id}", Collections.singletonMap("id", producto.getId()))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody().isEmpty();
+    }
+
 }
