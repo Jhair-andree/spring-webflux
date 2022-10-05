@@ -1,5 +1,6 @@
 package com.magadiflo.webflux.api.rest.app;
 
+import com.magadiflo.webflux.api.rest.app.models.documents.Categoria;
 import com.magadiflo.webflux.api.rest.app.models.documents.Producto;
 import com.magadiflo.webflux.api.rest.app.models.services.IProductoService;
 import org.assertj.core.api.Assertions;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Mono;
 
 import java.util.Collections;
 import java.util.List;
@@ -67,6 +69,48 @@ public class SpringBootWebfluxApiRestApplicationTests {
                 });
         //.jsonPath("$.id").isNotEmpty()
         //.jsonPath("$.nombre").isEqualTo("Interruptor simple");
+    }
+
+    @Test
+    public void crearTest() {
+        Categoria categoria = this.productoService.findCategoriaByNombre("Muebles").block();
+        Producto producto = new Producto("Mesa comedor", 100D, categoria);
+
+        this.client.post()
+                .uri("/api/v2/productos")
+                .contentType(MediaType.APPLICATION_JSON) //Es el media type del request con el cual vamos a enviar el json para crear el producto
+                .accept(MediaType.APPLICATION_JSON)//Es la response, el tipo de contenido que queremos manejar en la respuesta, lo que esperamos
+                .body(Mono.just(producto), Producto.class)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id").isNotEmpty()
+                .jsonPath("$.nombre").isEqualTo("Mesa comedor")
+                .jsonPath("$.categoria.nombre").isEqualTo("Muebles");
+
+    }
+
+    @Test
+    public void crear_2_Test() {
+        Categoria categoria = this.productoService.findCategoriaByNombre("Muebles").block();
+        Producto producto = new Producto("Mesa comedor", 100D, categoria);
+
+        this.client.post()
+                .uri("/api/v2/productos")
+                .contentType(MediaType.APPLICATION_JSON) //Es el media type del request con el cual vamos a enviar el json para crear el producto
+                .accept(MediaType.APPLICATION_JSON)//Es la response, el tipo de contenido que queremos manejar en la respuesta, lo que esperamos
+                .body(Mono.just(producto), Producto.class)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(Producto.class)
+                .consumeWith(response -> {
+                    Producto p = response.getResponseBody();
+                    Assertions.assertThat(p.getId()).isNotEmpty();
+                    Assertions.assertThat(p.getNombre()).isEqualTo("Mesa comedor");
+                    Assertions.assertThat(p.getCategoria().getNombre()).isEqualTo("Muebles");
+                });
     }
 
 }

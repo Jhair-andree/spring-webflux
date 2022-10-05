@@ -29,4 +29,6 @@ public interface IProductoService {
 
     Mono<Categoria> saveCategoria(Categoria categoria);
 
+    Mono<Categoria> findCategoriaByNombre(String nombre);
+
 }
