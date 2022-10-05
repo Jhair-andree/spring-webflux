@@ -113,4 +113,27 @@ public class SpringBootWebfluxApiRestApplicationTests {
                 });
     }
 
+    @Test
+    public void editarTest() throws InterruptedException {
+        TimeUnit.SECONDS.sleep(2);
+
+        Producto producto = this.productoService.findByNombre("Celular Huawey").block();//su categoría actual es Electrónico
+        Categoria categoria = this.productoService.findCategoriaByNombre("Informática").block();
+
+        Producto productoEditado = new Producto("Huawey Y9 2022", 1500D, categoria);
+
+        this.client.put()
+                .uri("/api/v2/productos/{id}", Collections.singletonMap("id", producto.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(Mono.just(productoEditado), Producto.class)
+                .exchange() // Con exchange, enviamos la request
+                .expectStatus().isCreated()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id").isNotEmpty()
+                .jsonPath("$.nombre").isEqualTo("Huawey Y9 2022")
+                .jsonPath("$.categoria.nombre").isEqualTo("Informática");
+    }
+
 }
